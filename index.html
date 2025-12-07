@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>COMETV | Constructor Metálico Virtual</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+        :root {
+            --bg-canvas: #f0f2f5;
+            --bg-panel: #1a1a1a;
+            --bg-input: #2d2d2d;
+            --border: #333;
+            --accent: #007bff;
+            --accent-hover: #0056b3;
+            --text-main: #e0e0e0;
+            --text-dim: #a0a0a0;
+        }
+
+        body { margin: 0; overflow: hidden; font-family: 'Inter', sans-serif; background-color: var(--bg-canvas); color: var(--text-main); user-select: none; }
+        
+        /* HOME SCREEN */
+        #home-screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f0f0f; z-index: 1000; display: flex; flex-direction: column; overflow: hidden; transition: transform 0.4s ease-in-out; }
+        #home-screen.hidden-screen { transform: translateY(-100%); pointer-events: none; }
+        .home-bg { position: absolute; top:0; left:0; width:100%; height:100%; opacity: 0.2; z-index: 0; }
+        .home-content { position: relative; z-index: 1; display: flex; height: 100%; }
+        .home-sidebar { width: 350px; background: #141414; border-right: 1px solid #333; padding: 40px; display: flex; flex-direction: column; box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
+        .app-brand { font-size: 24px; font-weight: 800; color: white; margin-bottom: 40px; display: flex; align-items: center; gap: 10px; letter-spacing: -0.5px; }
+        .brand-subtitle { font-size: 10px; color: #666; font-weight: 500; text-transform: uppercase; letter-spacing: 2px; margin-top: 5px; }
+        .action-btn { background: var(--accent); color: white; padding: 15px; border-radius: 4px; border: none; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: all 0.2s; margin-bottom: 10px; font-size: 14px; }
+        .action-btn:hover { background: var(--accent-hover); transform: translateX(2px); }
+        .action-btn.secondary { background: transparent; border: 1px solid #444; color: #ccc; }
+        .action-btn.secondary:hover { border-color: white; color: white; }
+        .recent-projects { flex: 1; padding: 60px; overflow-y: auto; }
+        .recent-title { font-size: 20px; font-weight: 300; margin-bottom: 30px; color: #888; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .project-card { background: #1a1a1a; border: 1px solid #333; padding: 20px; margin-bottom: 15px; border-radius: 6px; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center; }
+        .project-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .pj-name { font-weight: 600; color: white; font-size: 15px; }
+        .pj-date { font-size: 12px; color: #666; margin-top: 4px; }
+        .pj-actions { opacity: 0; transition: opacity 0.2s; }
+        .project-card:hover .pj-actions { opacity: 1; }
+
+        /* APP LAYOUT */
+        #app { position: relative; width: 100vw; height: 100vh; display: flex; opacity: 0; transition: opacity 0.5s 0.3s; }
+        #app.visible { opacity: 1; }
+        #canvas-container { flex-grow: 1; position: relative; outline: none; background: #eef1f5; overflow: hidden; }
+
+        .sidebar { width: 300px; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10; box-shadow: 4px 0 25px rgba(0,0,0,0.2); flex-shrink: 0; }
+        .sidebar-header { padding: 18px; border-bottom: 1px solid var(--border); font-weight: 800; font-size: 14px; letter-spacing: 0.05em; display: flex; align-items: center; justify-content: space-between; background: #111; color: white; border-left: 4px solid var(--accent); }
+        .scroll-area { flex: 1; overflow-y: auto; padding: 16px; }
+
+        .category { margin-bottom: 12px; border: 1px solid #333; border-radius: 4px; overflow: hidden; background: #222; }
+        .cat-title { padding: 10px 14px; cursor: pointer; font-size: 11px; font-weight: 600; background: #2a2a2a; display: flex; justify-content: space-between; align-items: center; text-transform: uppercase; color: #aaa; transition: background 0.2s; }
+        .cat-title:hover { background: #333; color: white; }
+        .cat-content { padding: 12px; display: none; background: #1a1a1a; }
+        .cat-content.open { display: block; }
+
+        .inspector { width: 280px; background: var(--bg-panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10; transition: margin-right 0.3s cubic-bezier(0.25, 1, 0.5, 1); position: absolute; right: 0; top: 0; bottom: 0; box-shadow: -4px 0 25px rgba(0,0,0,0.2); }
+        .inspector.hidden { margin-right: -280px; display: none; }
+
+        .control-group { margin-bottom: 16px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .label { font-size: 9px; color: #888; margin-bottom: 6px; display: block; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        select, input { width: 100%; background: #252525; border: 1px solid #444; color: white; padding: 0 10px; border-radius: 2px; font-size: 11px; outline: none; transition: all 0.2s; height: 30px; font-family: 'Inter', sans-serif; }
+        select:focus, input:focus { border-color: var(--accent); background: #333; }
+
+        .btn { width: 100%; padding: 8px; border: 1px solid #444; border-radius: 2px; background: #333; color: white; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; font-weight: 500; margin-bottom: 6px; }
+        .btn:hover { background: #444; border-color: #666; }
+        .btn.primary { background: var(--accent); border-color: var(--accent); }
+        .btn.primary:hover { background: var(--accent-hover); }
+        
+        .grid-buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+        .grid-colors { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .color-btn { height: 24px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); cursor: pointer; transition: transform 0.1s; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .color-btn:hover { border-color: white; transform: scale(1.1); }
+
+        /* TOOLBAR RENOVADA */
+        .toolbar { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(20, 20, 20, 0.95); backdrop-filter: blur(12px); padding: 6px; border-radius: 6px; display: flex; gap: 4px; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.4); z-index: 20; align-items: center; }
+        .tool-icon { width: 36px; height: 36px; border-radius: 4px; border: 1px solid transparent; background: transparent; color: #888; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; position: relative; }
+        .tool-icon:hover { background: rgba(255,255,255,0.1); color: white; border-color: #555; }
+        .tool-icon.active { background: var(--accent); color: white; border-color: var(--accent); }
+        .separator { width: 1px; background: #444; margin: 0 6px; height: 24px; align-self: center; }
+        
+        .toolbar-label { font-size: 9px; font-weight: 800; color: #666; margin-right: 4px; margin-left: 8px; font-family: 'JetBrains Mono'; }
+        .view-btn { font-family: 'JetBrains Mono'; font-weight: 700; font-size: 10px; width: 36px; }
+
+        .static-label { position: absolute; background: rgba(0,0,0, 0.8); color: #fff; padding: 2px 6px; font-size: 10px; border-radius: 2px; font-family: 'JetBrains Mono'; pointer-events: none; transform: translate(-50%, -150%); border: 1px solid #444; box-shadow: 0 2px 4px rgba(0,0,0,0.2); white-space: nowrap; }
+        .toast { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 4px; font-size: 13px; font-weight: 500; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 30; border: 1px solid var(--accent); display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .toast.visible { opacity: 1; }
+        
+        .measure-label { position: absolute; background: var(--accent); color: white; padding: 2px 6px; font-size: 11px; font-weight: bold; border-radius: 4px; pointer-events: none; transform: translate(-50%, -50%); z-index: 5; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+
+        .hidden { display: none !important; }
+    </style>
+    <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="home-screen">
+    <canvas id="bg-canvas" class="home-bg"></canvas>
+    <div class="home-content">
+        <div class="home-sidebar">
+            <div class="app-brand">
+                <div style="background:var(--accent); width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:4px;">
+                    <i class="fas fa-cubes text-white text-xl"></i>
+                </div>
+                <div>
+                    <div>COMETV</div>
+                    <div class="brand-subtitle">Constructor Metálico Virtual</div>
+                </div>
+            </div>
+            <button class="action-btn" onclick="app.startNewProject()"><i class="fas fa-plus-circle"></i> NUEVO PROYECTO</button>
+            <button class="action-btn secondary" onclick="document.getElementById('file-input').click()"><i class="fas fa-folder-open"></i> ABRIR ARCHIVO</button>
+            <input type="file" id="file-input" style="display:none" onchange="app.importProject(this)">
+            <div style="flex:1"></div>
+            <div style="color:#444; font-size:11px; text-align:center;">V 10.3.0 | Build 2024</div>
+        </div>
+        <div class="recent-projects">
+            <h2 class="recent-title">Biblioteca de Proyectos</h2>
+            <div id="projects-list"></div>
+            <div id="empty-state" style="text-align:center; color:#444; margin-top:50px; display:none;"><i class="far fa-folder-open" style="font-size:48px; margin-bottom:15px;"></i><p>No hay proyectos guardados</p></div>
+        </div>
+    </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div onclick="app.goHome()" style="cursor:pointer; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-arrow-left text-gray-400 hover:text-white"></i>
+                <span id="project-name-display">SIN TÍTULO</span>
+            </div>
+            <i class="fas fa-save text-gray-400 hover:text-white cursor-pointer" onclick="app.saveProject()" title="Guardar"></i>
+        </div>
+        
+        <div class="scroll-area">
+            <!-- CONFIGURACION ENTORNO (GRID) -->
+            <div class="category">
+                <div class="cat-title" onclick="ui.toggleCat(this)">
+                    <span><i class="fas fa-border-all mr-2"></i> Entorno & Grid</span>
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </div>
+                <div class="cat-content open">
+                    <label class="label">Malla de Trabajo</label>
+                    <select id="grid-selector" onchange="app.updateGridConfig()">
+                        <option value="4_4">4x4 m (Detalle)</option>
+                        <option value="8_8">8x8 m (Estándar)</option>
+                        <option value="16_16" selected>16x16 m (Nave)</option>
+                        <option value="32_32">32x32 m (Terreno)</option>
+                        <option value="2_2">2x2 m (Mesa)</option>
+                    </select>
+                    <div style="margin-top:8px; font-size:10px; color:#666; line-height:1.2;">
+                        * Malla estática de alta precisión. Subdivisiones de 1m (Principal) y 0.1m (Secundaria).
+                    </div>
+                </div>
+            </div>
+
+            <div class="category">
+                <div class="cat-title" onclick="ui.toggleCat(this)">
+                    <span><i class="fas fa-i-cursor mr-2"></i> Perfiles</span>
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </div>
+                <div class="cat-content">
+                    <label class="label">Tipo</label>
+                    <select id="create-type">
+                        <option value="IPE">IPE (Viga I)</option>
+                        <option value="IPN">IPN (Viga Inclinada)</option>
+                        <option value="UPN">UPN (Canal U)</option>
+                        <option value="C">Perfil C</option>
+                        <option value="HEB">HEB (Pilar)</option>
+                        <option value="L">Angular L</option>
+                        <option value="CHS">Pilar Circular</option>
+                    </select>
+                    <div style="height:8px"></div>
+                    <button class="btn primary" onclick="app.createProfileDefault()"><i class="fas fa-plus"></i> Añadir</button>
+                </div>
+            </div>
+
+            <div class="category">
+                <div class="cat-title" onclick="ui.toggleCat(this)">
+                    <span><i class="fas fa-th-large mr-2"></i> Componentes</span>
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </div>
+                <div class="cat-content">
+                    <label class="label">Refuerzos</label>
+                    <div class="grid-buttons mb-3">
+                        <button class="btn" onclick="app.createSquareGusset()">Cuadrada</button>
+                        <button class="btn" onclick="app.createTriangularGusset()">Triangular</button>
+                    </div>
+                    <button class="btn" onclick="app.createSupportAngle()">Angular Apoyo</button>
+                    <label class="label mt-2">Bases</label>
+                    <div class="grid-buttons">
+                        <button class="btn" onclick="app.createBasePlate()">Placa Base</button>
+                        <button class="btn" onclick="app.createAnchor()">Pernos</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="category">
+                <div class="cat-title" onclick="ui.toggleCat(this)">
+                    <span><i class="fas fa-bolt mr-2"></i> Tornillería</span>
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </div>
+                <div class="cat-content">
+                    <button class="btn" onclick="app.createBoltDefault()"><i class="fas fa-screw"></i> Tornillo DIN 931</button>
+                    <div class="grid-buttons mt-2">
+                        <button class="btn" onclick="app.createNutDefault()">Tuerca</button>
+                        <button class="btn" onclick="app.createWasherDefault()">Arandela</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="canvas-container">
+        <!-- TOOLBAR UNIFICADA -->
+        <div class="toolbar">
+            <span class="toolbar-label">HERRAMIENTAS</span>
+            <button id="tool-select" class="tool-icon active" onclick="app.setTool('select')" title="Seleccionar (Q)"><i class="fas fa-mouse-pointer"></i></button>
+            <button id="tool-translate" class="tool-icon" onclick="app.setTool('translate')" title="Mover (W)"><i class="fas fa-arrows-alt"></i></button>
+            <button id="tool-rotate" class="tool-icon" onclick="app.setTool('rotate')" title="Rotar (E)"><i class="fas fa-sync-alt"></i></button>
+            <button id="tool-scale" class="tool-icon" onclick="app.setTool('scale')" title="Escalar (R)"><i class="fas fa-expand"></i></button>
+            
+            <div class="separator"></div>
+            
+            <button id="tool-weld" class="tool-icon" onclick="app.setTool('weld')" title="Soldadura (Click en superficie)"><i class="fas fa-burn text-orange-400"></i></button>
+            <button id="tool-measure" class="tool-icon" onclick="app.setTool('measure')" title="Medir (Click A -> Click B)"><i class="fas fa-ruler-horizontal text-yellow-400"></i></button>
+            
+            <div class="separator"></div>
+            
+            <span class="toolbar-label">VISTAS</span>
+            <button class="tool-icon view-btn" onclick="app.setView('TOP')" title="Planta Técnica">TOP</button>
+            <button class="tool-icon view-btn" onclick="app.setView('FRONT')">FRT</button>
+            <button class="tool-icon view-btn" onclick="app.setView('RIGHT')">RGT</button>
+            <button class="tool-icon view-btn" onclick="app.setView('ISO')">ISO</button>
+            
+            <div class="separator"></div>
+            
+            <button id="tool-snap" class="tool-icon active" onclick="app.toggleSnap()" title="Grid Snap (1cm)"><i class="fas fa-magnet"></i></button>
+            <button class="tool-icon" onclick="app.renderHighRes()" title="Renderizar"><i class="fas fa-camera text-blue-400"></i></button>
+        </div>
+        
+        <div id="labels-container" style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:hidden;"></div>
+        <div id="toast" class="toast">Notificación</div>
+    </div>
+
+    <div id="inspector" class="inspector hidden">
+        <div class="sidebar-header" style="justify-content: space-between; background:#222;">
+            <span>PROPIEDADES</span>
+            <span id="obj-id" style="color:var(--accent); font-size:10px;">ID</span>
+        </div>
+        
+        <div class="scroll-area">
+            <div id="editor-profile" style="display:none;" class="control-group">
+                <label class="label text-blue-400"><i class="fas fa-edit"></i> Parametría</label>
+                <label class="label mt-2">Tipo Perfil</label>
+                <select id="edit-type" onchange="app.updateSelectedGeometry()"></select>
+                <label class="label mt-2">Sección Normalizada</label>
+                <select id="edit-size" onchange="app.updateSelectedGeometry()"></select>
+                <label class="label mt-2">Longitud (m)</label>
+                <input type="number" id="edit-len" step="0.1" onchange="app.updateSelectedGeometry()">
+            </div>
+
+            <div id="editor-component" style="display:none;" class="control-group">
+                <label class="label text-blue-400"><i class="fas fa-ruler-combined"></i> Geometría</label>
+                <label class="label mt-2">Dimensión A</label>
+                <input type="number" id="comp-w" step="0.01" onchange="app.updateComponent()">
+                <label class="label mt-2">Dimensión B</label>
+                <input type="number" id="comp-h" step="0.01" onchange="app.updateComponent()">
+                <label class="label mt-2">Espesor (t)</label>
+                <input type="number" id="comp-t" step="0.001" onchange="app.updateComponent()">
+            </div>
+
+            <div id="editor-fastener" style="display:none;" class="control-group">
+                <label class="label text-blue-400"><i class="fas fa-bolt"></i> Especificación</label>
+                <label class="label mt-2">Métrica (M)</label>
+                <select id="fast-size" onchange="app.updateFastener()">
+                    <option value="12">M12</option>
+                    <option value="16">M16</option>
+                    <option value="20">M20</option>
+                    <option value="24">M24</option>
+                    <option value="30">M30</option>
+                </select>
+                <div id="fast-len-container">
+                    <label class="label mt-2">Longitud (mm)</label>
+                    <input type="number" id="fast-len" step="5" value="60" onchange="app.updateFastener()">
+                </div>
+            </div>
+
+            <div class="control-group" style="margin-top:15px;">
+                <label class="label">Acabado Material</label>
+                <div class="grid-colors">
+                    <div class="color-btn" style="background:#808080" onclick="app.setMaterial('steel')" title="Acero Natural"></div>
+                    <div class="color-btn" style="background:#404040" onclick="app.setMaterial('dark')" title="Acero Oscuro"></div>
+                    <div class="color-btn" style="background:#e0e0e0" onclick="app.setMaterial('galv')" title="Galvanizado"></div>
+                    <div class="color-btn" style="background:#2ecc71" onclick="app.setCustomColor('#2ecc71')" title="Verde"></div>
+                    <div class="color-btn" style="background:#3498db" onclick="app.setCustomColor('#3498db')" title="Azul"></div>
+                    <div class="color-btn" style="background:#e91e63" onclick="app.setCustomColor('#e91e63')" title="Rosa"></div>
+                    <div class="color-btn" style="background:#9b59b6" onclick="app.setCustomColor('#9b59b6')" title="Violeta"></div>
+                    <input type="color" class="color-btn" style="padding:0; width:100%; border:none;" oninput="app.setCustomColor(this.value)">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="label">Transformación</label>
+                <div style="display:grid; grid-template-columns:20px 1fr 1fr 1fr; gap:4px; align-items:center; margin-bottom:4px;">
+                    <span style="font-size:9px; color:#666">P</span>
+                    <input type="number" id="inp-x" class="coord-input" step="0.01" onchange="app.updateTransformFromUI()">
+                    <input type="number" id="inp-y" class="coord-input" step="0.01" onchange="app.updateTransformFromUI()">
+                    <input type="number" id="inp-z" class="coord-input" step="0.01" onchange="app.updateTransformFromUI()">
+                </div>
+                <div style="display:grid; grid-template-columns:20px 1fr 1fr 1fr; gap:4px; align-items:center;">
+                    <span style="font-size:9px; color:#666">R</span>
+                    <input type="number" id="inp-rx" class="coord-input" step="15" onchange="app.updateTransformFromUI()">
+                    <input type="number" id="inp-ry" class="coord-input" step="15" onchange="app.updateTransformFromUI()">
+                    <input type="number" id="inp-rz" class="coord-input" step="15" onchange="app.updateTransformFromUI()">
+                </div>
+            </div>
+
+            <div style="margin-top:auto; padding-top:20px;">
+                <button class="btn" onclick="app.rotateSelection('y')"><i class="fas fa-redo"></i> Rotar Y 90º</button>
+                <button class="btn" onclick="app.rotateSelection('x')"><i class="fas fa-redo"></i> Rotar X 90º</button>
+                <button class="btn" style="border-color:#d32f2f; color:#ff5252;" onclick="app.deleteSelected()"><i class="fas fa-trash"></i> Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { TransformControls } from 'three/addons/controls/TransformControls.js';
+
+    const DB = {
+        IPE: [80, 100, 120, 140, 160, 180, 200, 220, 240, 270, 300, 330, 360, 400, 500],
+        IPN: [80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 300, 340, 400],
+        HEB: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340, 400],
+        UPN: [80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 300],
+        C:   [80, 100, 120, 140, 160, 200, 250],
+        L:   [40, 50, 60, 70, 80, 90, 100, 120, 150, 200],
+        CHS: [40, 50, 60, 80, 100, 120, 150, 200, 250, 300]
+    };
+
+    let scene, mainCamera, renderer, controls, gizmo, camera, dirLight, ambLight, gridHelper, subGridHelper; 
+    const objects = [];
+    const measures = [];
+    let selectedObj = null;
+    let currentProjectName = "Sin Título";
+
+    // Materiales
+    const matSteel = new THREE.MeshStandardMaterial({ color: 0x808080, roughness: 0.4, metalness: 0.6 });
+    const matDark = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.7, metalness: 0.3 });
+    const matGalv = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.3, metalness: 0.3 });
+    const matWeld = new THREE.MeshStandardMaterial({ color: 0xff4500, roughness: 0.8, emissive: 0x220000 }); // Soldadura
+    const matMeasure = new THREE.LineBasicMaterial({ color: 0xffd700, depthTest: false, depthWrite: false }); // Medición
+
+    // --- FÁBRICA DE GEOMETRÍA ---
+    const GeometryFactory = {
+        generateProfile: (type, sizeStr, len) => {
+            let dim = (parseInt(sizeStr) / 1000) || 0.1;
+            let shape;
+            if (type === 'IPE' || type === 'IPN') shape = GeometryFactory.IShape(dim, dim/2, dim*0.05, dim*0.08);
+            else if (type === 'HEB') shape = GeometryFactory.IShape(dim, dim, dim*0.06, dim*0.1);
+            else if (type === 'UPN' || type === 'C') shape = GeometryFactory.UShape(dim, dim/2, dim*0.06, dim*0.09);
+            else if (type === 'L') shape = GeometryFactory.LShape(dim, dim, dim*0.1);
+            else if (type === 'CHS') shape = GeometryFactory.HollowCircle(dim/2, dim*0.05);
+            else shape = GeometryFactory.HollowRect(0.1, 0.1, 0.01);
+            const geo = new THREE.ExtrudeGeometry(shape, { depth: len, bevelEnabled: false });
+            geo.center(); return new THREE.Mesh(geo);
+        },
+        generateComponent: (type, w, h, t) => {
+            let geo;
+            if(type === 'SUPPORT_ANGLE') {
+                 const s = GeometryFactory.LShape(w, w, t); 
+                 geo = new THREE.ExtrudeGeometry(s, { depth: h, bevelEnabled:false }); geo.center();
+            } else if(type === 'PLATE' || type === 'BASE_PLATE') {
+                 geo = new THREE.BoxGeometry(w, t, h);
+            } else if(type === 'GUSSET_TRI') {
+                const s = new THREE.Shape(); s.moveTo(-w/2, -h/2); s.lineTo(w/2, -h/2); s.lineTo(-w/2, h/2); s.closePath();
+                geo = new THREE.ExtrudeGeometry(s, { depth: t, bevelEnabled:false }); 
+            } else if(type === 'GUSSET_SQR') {
+                 geo = new THREE.BoxGeometry(w, h, t); 
+            }
+            const mesh = new THREE.Mesh(geo);
+            if(type === 'GUSSET_TRI') mesh.rotation.x = -Math.PI/2;
+            return mesh;
+        },
+        generateAnchor: (d, len) => {
+             const group = new THREE.Group();
+             const v = new THREE.Mesh(new THREE.CylinderGeometry(d/2, d/2, len, 12), matSteel.clone()); v.position.y = len/2;
+             const hook = new THREE.Mesh(new THREE.CylinderGeometry(d/2, d/2, d*4, 12), matSteel.clone()); hook.rotation.z = Math.PI/2; hook.position.set(d*2, 0, 0); 
+             group.add(v); group.add(hook); return group;
+        },
+        generateWeldBead: (pos, normal) => {
+            const geo = new THREE.CapsuleGeometry(0.005, 0.05, 4, 8);
+            const mesh = new THREE.Mesh(geo, matWeld);
+            mesh.position.copy(pos);
+            mesh.lookAt(pos.clone().add(normal));
+            mesh.rotateX(Math.PI/2); // Acostar sobre la superficie
+            return mesh;
+        },
+        IShape: (h,b,tw,tf) => { const s = new THREE.Shape(); s.moveTo(-b/2,-h/2); s.lineTo(b/2,-h/2); s.lineTo(b/2,-h/2+tf); s.lineTo(tw/2,-h/2+tf); s.lineTo(tw/2,h/2-tf); s.lineTo(b/2,h/2-tf); s.lineTo(b/2,h/2); s.lineTo(-b/2,h/2); s.lineTo(-b/2,h/2-tf); s.lineTo(-tw/2,h/2-tf); s.lineTo(-tw/2,-h/2+tf); s.lineTo(-b/2,-h/2+tf); return s; },
+        UShape: (h,b,tw,tf) => { const s = new THREE.Shape(); s.moveTo(-b/2,-h/2); s.lineTo(b/2,-h/2); s.lineTo(b/2,-h/2+tf); s.lineTo(-b/2+tw,-h/2+tf); s.lineTo(-b/2+tw,h/2-tf); s.lineTo(b/2,h/2-tf); s.lineTo(b/2,h/2); s.lineTo(-b/2,h/2); return s; },
+        LShape: (h,b,t) => { const s = new THREE.Shape(); s.moveTo(-b/2,-h/2); s.lineTo(b/2,-h/2); s.lineTo(b/2,-h/2+t); s.lineTo(-b/2+t,-h/2+t); s.lineTo(-b/2+t,h/2); s.lineTo(-b/2,h/2); return s; },
+        HollowRect: (w,h,t) => { const s = new THREE.Shape(); s.moveTo(-w/2,-h/2); s.lineTo(w/2,-h/2); s.lineTo(w/2,h/2); s.lineTo(-w/2,h/2); s.closePath(); const hole = new THREE.Path(); hole.moveTo(-w/2+t,-h/2+t); hole.lineTo(w/2-t,-h/2+t); hole.lineTo(w/2-t,h/2-t); hole.lineTo(-w/2+t,h/2-t); hole.closePath(); s.holes.push(hole); return s; },
+        HollowCircle: (r,t) => { const s = new THREE.Shape(); s.absarc(0,0,r,0,Math.PI*2,false); const hole = new THREE.Path(); hole.absarc(0,0,r-t,0,Math.PI*2,true); s.holes.push(hole); return s; }
+    };
+
+    const app = {
+        mode: 'select',
+        measureState: { step: 0, p1: null, tempObj: null },
+
+        // --- CORE ---
+        startNewProject: () => {
+            currentProjectName = "Nuevo Proyecto " + new Date().toLocaleDateString();
+            document.getElementById('project-name-display').innerText = currentProjectName;
+            app.resetScene();
+            document.getElementById('home-screen').classList.add('hidden-screen');
+            document.getElementById('app').classList.add('visible');
+            app.updateGridConfig();
+        },
+        goHome: () => {
+            document.getElementById('home-screen').classList.remove('hidden-screen');
+            document.getElementById('app').classList.remove('visible');
+            app.loadProjectsList();
+        },
+        saveProject: () => {
+            const data = objects.map(o => ({
+                type: o.userData.type,
+                userData: o.userData,
+                pos: o.position, rot: o.rotation,
+                matColor: o.material ? o.material.color.getHex() : 0x808080
+            }));
+            const project = { name: currentProjectName, date: new Date().toISOString(), data: data };
+            localStorage.setItem('cometv_pj_' + Date.now(), JSON.stringify(project));
+            ui.toast("Proyecto Guardado");
+        },
+        loadProjectsList: () => {
+            const list = document.getElementById('projects-list'); list.innerHTML = '';
+            let count = 0;
+            for(let i=0; i<localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if(key.startsWith('cometv_pj_')) {
+                    count++;
+                    const p = JSON.parse(localStorage.getItem(key));
+                    const card = document.createElement('div'); card.className = 'project-card';
+                    card.innerHTML = `<div><div class="pj-name">${p.name}</div><div class="pj-date">${new Date(p.date).toLocaleString()}</div></div><div class="pj-actions"><button class="btn" style="width:auto; padding:4px 8px;" onclick="app.loadProject('${key}')">ABRIR</button></div>`;
+                    list.appendChild(card);
+                }
+            }
+            document.getElementById('empty-state').style.display = count === 0 ? 'block' : 'none';
+        },
+        loadProject: (key) => {
+            const p = JSON.parse(localStorage.getItem(key));
+            currentProjectName = p.name;
+            document.getElementById('project-name-display').innerText = currentProjectName;
+            app.resetScene();
+            p.data.forEach(d => {
+                let obj;
+                if(d.type === 'PROFILE') obj = GeometryFactory.generateProfile(d.userData.pType, d.userData.pSize, d.userData.pLen);
+                else if(d.userData.type === 'ANCHOR') obj = GeometryFactory.generateAnchor(d.userData.cDiam/1000, d.userData.cLen/1000);
+                else if(d.type === 'WELD') obj = GeometryFactory.generateWeldBead(new THREE.Vector3(), new THREE.Vector3(0,1,0)); // Placeholder pos
+                else if(d.type.includes('BOLT')||d.type.includes('NUT')||d.type.includes('WASHER')) app.spawnFastener(d.userData.type, d.userData.fSize, d.userData.fLen, false);
+                else obj = GeometryFactory.generateComponent(d.userData.type, d.userData.cW, d.userData.cH, d.userData.cT);
+                
+                if(d.type.includes('BOLT') || d.type.includes('NUT') || d.type.includes('WASHER')) obj = objects[objects.length-1];
+                else { obj.userData = d.userData; app.addToScene(obj); }
+                
+                obj.position.copy(d.pos); obj.rotation.copy(d.rot);
+                if(obj.material && d.type !== 'WELD') obj.material.color.setHex(d.matColor);
+            });
+            document.getElementById('home-screen').classList.add('hidden-screen');
+            document.getElementById('app').classList.add('visible');
+            app.updateGridConfig();
+        },
+
+        // --- GRID LOGIC ---
+        updateGridConfig: () => {
+            const val = document.getElementById('grid-selector').value;
+            let size = 16, divs = 16;
+            if(val === '2_2') { size=2; divs=2; }
+            else if(val === '4_4') { size=4; divs=4; }
+            else if(val === '8_8') { size=8; divs=8; }
+            else if(val === '32_32') { size=32; divs=32; }
+            
+            if(gridHelper) scene.remove(gridHelper);
+            if(subGridHelper) scene.remove(subGridHelper);
+
+            // Malla Principal (Metros)
+            gridHelper = new THREE.GridHelper(size, divs, 0x444444, 0xcccccc);
+            gridHelper.position.y = 0;
+            gridHelper.material.opacity = 0.5;
+            gridHelper.material.transparent = true;
+            gridHelper.material.depthWrite = false; // Fix z-fighting
+            scene.add(gridHelper);
+
+            // Malla Secundaria (Decímetros) - Solo si no es muy grande para evitar lag visual
+            if(size <= 16) {
+                subGridHelper = new THREE.GridHelper(size, divs*10, 0xdddddd, 0xeeeeee);
+                subGridHelper.position.y = 0;
+                subGridHelper.material.opacity = 0.2;
+                subGridHelper.material.transparent = true;
+                subGridHelper.material.depthWrite = false;
+                scene.add(subGridHelper);
+            }
+        },
+
+        // --- TOOLS ---
+        setTool: (mode) => {
+            app.mode = mode;
+            // UI Update
+            document.querySelectorAll('.tool-icon').forEach(b => b.classList.remove('active'));
+            const btn = document.getElementById('tool-'+mode); if(btn) btn.classList.add('active');
+            
+            // Gizmo Logic
+            if(['select', 'weld', 'measure'].includes(mode)) { if(gizmo) gizmo.detach(); }
+            else { if(gizmo) { gizmo.setMode(mode); if(selectedObj && selectedObj.userData.type !== 'WELD') gizmo.attach(selectedObj); } }
+            
+            // Reset Measure State
+            if(mode !== 'measure') {
+                if(app.measureState.tempObj) { scene.remove(app.measureState.tempObj); app.measureState.tempObj = null; }
+                app.measureState.step = 0;
+            }
+            
+            ui.toast(`Herramienta: ${mode.toUpperCase()}`);
+        },
+        
+        handleWeld: (intersect) => {
+            const pos = intersect.point;
+            const norm = intersect.face.normal;
+            // Orientar normal segun objeto
+            const n = norm.clone().transformDirection(intersect.object.matrixWorld).normalize();
+            
+            const bead = GeometryFactory.generateWeldBead(pos, n);
+            bead.userData = { type: 'WELD', name: 'Soldadura' };
+            app.addToScene(bead);
+            ui.toast("Soldadura aplicada");
+        },
+
+        handleMeasure: (intersect, point) => {
+            const state = app.measureState;
+            if(state.step === 0) {
+                // Click 1
+                state.p1 = point.clone();
+                state.step = 1;
+                // Visual marker start
+                const g = new THREE.SphereGeometry(0.02);
+                const m = new THREE.MeshBasicMaterial({color:0xffd700});
+                state.tempObj = new THREE.Mesh(g,m);
+                state.tempObj.position.copy(point);
+                scene.add(state.tempObj);
+            } else {
+                // Click 2
+                const p2 = point.clone();
+                const dist = state.p1.distanceTo(p2);
+                
+                // Draw Final Line
+                const pts = [state.p1, p2];
+                const geo = new THREE.BufferGeometry().setFromPoints(pts);
+                const line = new THREE.Line(geo, matMeasure);
+                scene.add(line);
+                measures.push(line);
+                
+                // Add Label
+                ui.createMeasureLabel(state.p1, p2, dist);
+                
+                // Reset
+                scene.remove(state.tempObj);
+                state.tempObj = null;
+                state.step = 0;
+                ui.toast(`Distancia: ${dist.toFixed(3)} m`);
+            }
+        },
+
+        // --- OBJECT CREATION WRAPPERS ---
+        createProfileDefault: () => {
+            const type = document.getElementById('create-type').value;
+            const size = DB[type][1] || 100;
+            const m = GeometryFactory.generateProfile(type, size, 3.0);
+            m.userData = { type: 'PROFILE', pType: type, pSize: size, pLen: 3.0, originalMat: matSteel.clone() };
+            m.material = m.userData.originalMat; m.rotation.x = Math.PI/2; m.castShadow = true; m.receiveShadow = true;
+            app.addToScene(m);
+        },
+        createSupportAngle: () => app.spawnComponent('SUPPORT_ANGLE', 0.1, 0.2, 0.01, "Angular Apoyo"),
+        createSquareGusset: () => app.spawnComponent('GUSSET_SQR', 0.2, 0.2, 0.01, "Cartela Cuadrada"),
+        createTriangularGusset: () => app.spawnComponent('GUSSET_TRI', 0.2, 0.2, 0.01, "Cartela Triangular"),
+        createBasePlate: () => app.spawnComponent('BASE_PLATE', 0.3, 0.3, 0.02, "Placa Base"),
+        createAnchor: () => {
+             const g = GeometryFactory.generateAnchor(0.02, 0.4);
+             g.userData = { type: 'ANCHOR', cDiam: 20, cLen: 400, name: "Perno Anclaje" };
+             g.traverse(c => { c.castShadow=true; c.receiveShadow=true; });
+             app.addToScene(g);
+        },
+        spawnComponent: (t, w, h, th, n) => {
+            const m = GeometryFactory.generateComponent(t, w, h, th);
+            m.userData = { type: t, cW: w, cH: h, cT: th, name: n, originalMat: matSteel.clone() };
+            m.material = m.userData.originalMat; m.castShadow = true; m.receiveShadow = true;
+            app.addToScene(m);
+        },
+        createBoltDefault: () => app.spawnFastener('BOLT', 20, 60),
+        createNutDefault: () => app.spawnFastener('NUT', 20, 0),
+        createWasherDefault: () => app.spawnFastener('WASHER', 20, 0),
+        spawnFastener: (t, s, l, add=true) => {
+            let o; const d=s/1000;
+            if(t==='BOLT'){ o=new THREE.Group(); const sh=new THREE.Mesh(new THREE.CylinderGeometry(d/2,d/2,l/1000,12), matSteel.clone()); sh.position.y=-(l/1000)/2; const hd=new THREE.Mesh(new THREE.CylinderGeometry(d*0.9,d*0.9,d*0.7,6), matSteel.clone()); o.add(sh); o.add(hd); }
+            else if(t==='NUT'){ o=new THREE.Mesh(new THREE.CylinderGeometry(d*0.9,d*0.9,d*0.8,6), matSteel.clone()); o.rotation.x=Math.PI/2; }
+            else { const sh=new THREE.Shape(); sh.absarc(0,0,d*1.1,0,Math.PI*2); const hl=new THREE.Path(); hl.absarc(0,0,d*0.55,0,Math.PI*2,true); sh.holes.push(hl); o=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:d*0.15,bevelEnabled:false}), matSteel.clone()); o.rotation.x=Math.PI/2; }
+            o.userData={type:t, fSize:s, fLen:l, name:`ISO ${s}`}; o.traverse(c=>{c.castShadow=true;c.receiveShadow=true});
+            if(add) app.addToScene(o); return o;
+        },
+
+        // --- SCENE MANIPULATION ---
+        addToScene: (o) => { if(gizmo) gizmo.detach(); scene.add(o); objects.push(o); app.select(o); },
+        select: (o) => {
+            selectedObj = o; ui.updateLabels();
+            if(o) { if(gizmo && app.mode !== 'weld' && app.mode !== 'measure') gizmo.attach(o); ui.showInspector(true); ui.populateInspector(o); }
+            else { if(gizmo) gizmo.detach(); ui.showInspector(false); }
+        },
+        updateSelectedGeometry: () => {
+            if(!selectedObj || selectedObj.userData.type !== 'PROFILE') return;
+            const nt = document.getElementById('edit-type').value;
+            const ns = document.getElementById('edit-size').value;
+            const nl = parseFloat(document.getElementById('edit-len').value) || 1;
+            const t = GeometryFactory.generateProfile(nt, ns, nl);
+            selectedObj.geometry.dispose(); selectedObj.geometry = t.geometry.clone();
+            selectedObj.userData.pType = nt; selectedObj.userData.pSize = ns; selectedObj.userData.pLen = nl;
+            if(nt !== selectedObj.userData.pType) { ui.fillSizes('edit', nt); document.getElementById('edit-size').value = ns; }
+            ui.updateLabels();
+        },
+        updateComponent: () => {
+            if(!selectedObj) return;
+            const t = selectedObj.userData.type;
+            if(t === 'ANCHOR') {
+                const d = parseFloat(document.getElementById('comp-w').value); const l = parseFloat(document.getElementById('comp-h').value);
+                const g = GeometryFactory.generateAnchor(d, l);
+                while(selectedObj.children.length > 0) selectedObj.remove(selectedObj.children[0]);
+                while(g.children.length > 0) selectedObj.add(g.children[0]);
+                selectedObj.userData.cDiam = d*1000; selectedObj.userData.cLen = l*1000; return;
+            }
+            if(!['PLATE','BASE_PLATE','GUSSET_SQR','GUSSET_TRI', 'SUPPORT_ANGLE'].includes(t)) return;
+            const w = parseFloat(document.getElementById('comp-w').value); const h = parseFloat(document.getElementById('comp-h').value); const th = parseFloat(document.getElementById('comp-t').value);
+            const m = GeometryFactory.generateComponent(t, w, h, th);
+            selectedObj.geometry.dispose(); selectedObj.geometry = m.geometry.clone();
+            selectedObj.userData.cW = w; selectedObj.userData.cH = h; selectedObj.userData.cT = th;
+            ui.updateLabels();
+        },
+        updateFastener: () => {
+            if(!selectedObj || !['BOLT','NUT','WASHER'].includes(selectedObj.userData.type)) return;
+            const ns = parseInt(document.getElementById('fast-size').value); const nl = parseFloat(document.getElementById('fast-len').value);
+            const op = selectedObj.position.clone(); const or = selectedObj.rotation.clone();
+            app.deleteSelected(); app.spawnFastener(selectedObj.userData.type, ns, nl);
+            const n = objects[objects.length-1]; n.position.copy(op); n.rotation.copy(or); app.select(n);
+        },
+        updateTransformFromUI: () => {
+            if(!selectedObj) return;
+            selectedObj.position.set(parseFloat(document.getElementById('inp-x').value), parseFloat(document.getElementById('inp-y').value), parseFloat(document.getElementById('inp-z').value));
+            selectedObj.rotation.set(THREE.MathUtils.degToRad(parseFloat(document.getElementById('inp-rx').value)), THREE.MathUtils.degToRad(parseFloat(document.getElementById('inp-ry').value)), THREE.MathUtils.degToRad(parseFloat(document.getElementById('inp-rz').value)));
+            ui.updateLabels();
+        },
+        setMaterial: (type) => { if(!selectedObj) return; let m = (type==='galv'?matGalv:(type==='dark'?matDark:matSteel)); selectedObj.traverse(c=>{if(c.isMesh)c.material=m.clone()}); if(selectedObj.isMesh) selectedObj.material=m.clone(); },
+        setCustomColor: (hex) => { if(!selectedObj) return; const m = new THREE.MeshStandardMaterial({color:hex, roughness:0.5}); selectedObj.traverse(c=>{if(c.isMesh)c.material=m}); if(selectedObj.isMesh) selectedObj.material=m; },
+        
+        toggleSnap: () => {
+            const btn = document.getElementById('tool-snap'); btn.classList.toggle('active');
+            const snap = btn.classList.contains('active');
+            gizmo.setTranslationSnap(snap?0.01:null); gizmo.setRotationSnap(snap?THREE.MathUtils.degToRad(15):null);
+            ui.toast(snap?"Snap ACTIVO":"Snap INACTIVO");
+        },
+        rotateSelection: (axis) => { if(selectedObj) { selectedObj.rotation[axis] += Math.PI/2; ui.updateCoords(); } },
+        deleteSelected: () => { if(selectedObj) { gizmo.detach(); scene.remove(selectedObj); objects.splice(objects.indexOf(selectedObj), 1); app.select(null); ui.removeLabel(); } },
+        resetScene: () => { 
+            objects.forEach(o => scene.remove(o)); objects.length=0; 
+            measures.forEach(m => scene.remove(m)); measures.length=0;
+            document.querySelectorAll('.measure-label').forEach(e => e.remove());
+            app.select(null); 
+        },
+
+        // --- VIEWS ---
+        setView: (view) => {
+            const container = document.getElementById('canvas-container');
+            const aspect = container.clientWidth / container.clientHeight;
+            const orthoSize = 8; // Ajustado para ver mejor la grid
+            const orthoCam = new THREE.OrthographicCamera(-orthoSize * aspect, orthoSize * aspect, orthoSize, -orthoSize, 0.1, 1000);
+            
+            renderer.shadowMap.enabled = true; dirLight.visible = true; ambLight.intensity = 0.8; scene.background = new THREE.Color(0xeef1f5);
+
+            if(view === 'ISO') { 
+                camera = mainCamera; controls.object = mainCamera; controls.enableRotate = true; 
+            } else {
+                controls.object = orthoCam; controls.enableRotate = false; camera = orthoCam;
+                if(view === 'TOP') { camera.position.set(0, 10, 0); camera.lookAt(0,0,0); camera.up.set(0, 0, -1); renderer.shadowMap.enabled = false; dirLight.visible = false; ambLight.intensity = 2.0; scene.background = new THREE.Color(0xffffff); } 
+                else if(view === 'FRONT') { camera.position.set(0, 0, 10); camera.lookAt(0,0,0); } 
+                else if(view === 'RIGHT') { camera.position.set(10, 0, 0); camera.lookAt(0,0,0); }
+            }
+            if (gizmo) gizmo.camera = camera;
+            camera.updateProjectionMatrix(); controls.update();
+        },
+        renderHighRes: () => { ui.toast("Generando Render..."); renderer.render(scene, camera); setTimeout(() => { const l = document.createElement('a'); l.download = 'render.png'; l.href = renderer.domElement.toDataURL('image/png'); l.click(); ui.toast("Imagen Guardada"); }, 100); }
+    };
+
+    const ui = {
+        toggleCat: (el) => { el.nextElementSibling.classList.toggle('open'); },
+        fillSizes: (prefix, type) => { const s = document.getElementById(prefix+'-size'); s.innerHTML=''; DB[type]?.forEach(v => { const o = document.createElement('option'); o.value=v; o.text=v; s.add(o); }); },
+        populateSizesDropdown: () => { const t = document.getElementById('edit-type'); ['IPE','IPN','UPN','C','HEB','L','CHS'].forEach(v => { const o = document.createElement('option'); o.value=v; o.text=v; t.add(o); }); },
+        showInspector: (show) => { const el = document.getElementById('inspector'); if(show) el.classList.remove('hidden'); else el.classList.add('hidden'); },
+        populateInspector: (o) => {
+            document.getElementById('obj-id').innerText = '#' + o.id;
+            const t = o.userData.type;
+            document.getElementById('editor-profile').style.display = (t==='PROFILE') ? 'block' : 'none';
+            document.getElementById('editor-component').style.display = (['PLATE','BASE_PLATE','GUSSET_SQR','GUSSET_TRI','SUPPORT_ANGLE','ANCHOR'].includes(t)) ? 'block' : 'none';
+            document.getElementById('editor-fastener').style.display = (['BOLT','NUT','WASHER'].includes(t)) ? 'block' : 'none';
+            
+            if(t==='PROFILE') { document.getElementById('edit-type').value=o.userData.pType; ui.fillSizes('edit', o.userData.pType); document.getElementById('edit-size').value=o.userData.pSize; document.getElementById('edit-len').value=o.userData.pLen; }
+            else if(t==='ANCHOR') { document.getElementById('comp-w').value=o.userData.cDiam/1000; document.getElementById('comp-h').value=o.userData.cLen/1000; }
+            else if(document.getElementById('editor-component').style.display==='block') { document.getElementById('comp-w').value=o.userData.cW; document.getElementById('comp-h').value=o.userData.cH; document.getElementById('comp-t').value=o.userData.cT; }
+            if(['BOLT','NUT','WASHER'].includes(t)) { document.getElementById('fast-size').value=o.userData.fSize; document.getElementById('fast-len-container').style.display=(t==='BOLT'?'block':'none'); if(t==='BOLT') document.getElementById('fast-len').value=o.userData.fLen; }
+            ui.updateCoords();
+        },
+        updateCoords: () => {
+            if(selectedObj) {
+                document.getElementById('inp-x').value = selectedObj.position.x.toFixed(2);
+                document.getElementById('inp-y').value = selectedObj.position.y.toFixed(2);
+                document.getElementById('inp-z').value = selectedObj.position.z.toFixed(2);
+                document.getElementById('inp-rx').value = Math.round(THREE.MathUtils.radToDeg(selectedObj.rotation.x));
+                document.getElementById('inp-ry').value = Math.round(THREE.MathUtils.radToDeg(selectedObj.rotation.y));
+                document.getElementById('inp-rz').value = Math.round(THREE.MathUtils.radToDeg(selectedObj.rotation.z));
+            }
+        },
+        updateLabels: () => {
+            const cont = document.getElementById('labels-container'); 
+            // Limpiar solo etiquetas estáticas de objetos, no las de medidas
+            Array.from(cont.children).forEach(c => { if(c.classList.contains('static-label')) c.remove(); });
+            
+            if(!selectedObj) return;
+            const box = new THREE.Box3().setFromObject(selectedObj); 
+            const c = new THREE.Vector3(); box.getCenter(c);
+            const pos = c.clone().project(camera);
+            if(Math.abs(pos.z) > 1) return;
+
+            const div = document.createElement('div'); div.className = 'static-label'; 
+            if(selectedObj.userData.type === 'PROFILE') div.innerText = `${selectedObj.userData.pType} ${selectedObj.userData.pSize}`;
+            else if (selectedObj.userData.type === 'BOLT') div.innerText = `M${selectedObj.userData.fSize}`;
+            else div.innerText = selectedObj.userData.name || 'Objeto';
+            
+            div.style.left = ((pos.x*.5+.5)*cont.clientWidth)+'px'; div.style.top = ((pos.y*-.5+.5)*cont.clientHeight)+'px';
+            cont.appendChild(div);
+        },
+        createMeasureLabel: (p1, p2, dist) => {
+            const mid = p1.clone().add(p2).multiplyScalar(0.5);
+            const div = document.createElement('div');
+            div.className = 'measure-label';
+            div.innerText = dist.toFixed(3) + ' m';
+            div.dataset.x = mid.x; div.dataset.y = mid.y; div.dataset.z = mid.z;
+            document.getElementById('labels-container').appendChild(div);
+            ui.updateMeasureLabels();
+        },
+        updateMeasureLabels: () => {
+            document.querySelectorAll('.measure-label').forEach(el => {
+                const pos = new THREE.Vector3(parseFloat(el.dataset.x), parseFloat(el.dataset.y), parseFloat(el.dataset.z));
+                pos.project(camera);
+                if(Math.abs(pos.z)>1) el.style.display='none';
+                else {
+                    el.style.display='block';
+                    el.style.left = ((pos.x*.5+.5)*document.getElementById('canvas-container').clientWidth)+'px';
+                    el.style.top = ((pos.y*-.5+.5)*document.getElementById('canvas-container').clientHeight)+'px';
+                }
+            });
+        },
+        removeLabel: () => { const cont = document.getElementById('labels-container'); Array.from(cont.children).forEach(c => { if(c.classList.contains('static-label')) c.remove(); }); },
+        toast: (msg) => { const t = document.getElementById('toast'); t.innerHTML = msg; t.classList.add('visible'); setTimeout(() => t.classList.remove('visible'), 2000); }
+    };
+
+    function init() {
+        // Home Animation
+        const c = document.getElementById('bg-canvas'); const ctx = c.getContext('2d');
+        let w, h; const nodes = [];
+        const resize = () => { w = c.width = window.innerWidth; h = c.height = window.innerHeight; nodes.length=0; for(let i=0;i<40;i++) nodes.push({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.5,vy:(Math.random()-.5)*.5}); };
+        const draw = () => { ctx.clearRect(0,0,w,h); ctx.strokeStyle='#333'; ctx.lineWidth=1; nodes.forEach((n,i) => { n.x+=n.vx; n.y+=n.vy; if(n.x<0||n.x>w)n.vx*=-1; if(n.y<0||n.y>h)n.vy*=-1; for(let j=i+1;j<nodes.length;j++){ const n2=nodes[j]; if(Math.hypot(n2.x-n.x,n2.y-n.y)<150){ctx.beginPath();ctx.moveTo(n.x,n.y);ctx.lineTo(n2.x,n2.y);ctx.stroke();} } }); requestAnimationFrame(draw); };
+        window.addEventListener('resize', resize); resize(); draw();
+
+        app.loadProjectsList();
+
+        const container = document.getElementById('canvas-container');
+        scene = new THREE.Scene(); scene.background = new THREE.Color(0xeef1f5);
+        
+        ambLight = new THREE.AmbientLight(0xffffff, 0.8); scene.add(ambLight);
+        dirLight = new THREE.DirectionalLight(0xffffff, 2.5); dirLight.position.set(5, 10, 7); dirLight.castShadow = true; 
+        dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048; scene.add(dirLight);
+
+        mainCamera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 0.1, 1000);
+        mainCamera.position.set(4, 4, 4); camera = mainCamera;
+        
+        renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, logarithmicDepthBuffer: true }); // Log buffer para grid
+        renderer.setSize(container.clientWidth, container.clientHeight); renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        controls = new OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.dampingFactor = 0.1;
+        gizmo = new TransformControls(camera, renderer.domElement);
+        gizmo.setTranslationSnap(0.01); gizmo.setRotationSnap(THREE.MathUtils.degToRad(15));
+        gizmo.addEventListener('dragging-changed', (e) => controls.enabled = !e.value);
+        gizmo.addEventListener('change', () => { ui.updateCoords(); ui.updateLabels(); });
+        scene.add(gizmo);
+
+        window.addEventListener('resize', onResize);
+        renderer.domElement.addEventListener('pointerdown', onPointerDown);
+        renderer.domElement.addEventListener('pointermove', onPointerMove);
+        controls.addEventListener('change', () => { ui.updateLabels(); ui.updateMeasureLabels(); });
+
+        ui.populateSizesDropdown();
+        animate();
+    }
+
+    function onResize() { 
+        const c = document.getElementById('canvas-container'); 
+        if(camera.isPerspectiveCamera) camera.aspect = c.clientWidth/c.clientHeight; 
+        else { const a = c.clientWidth/c.clientHeight; camera.left=-5*a; camera.right=5*a; camera.top=5; camera.bottom=-5; }
+        camera.updateProjectionMatrix(); renderer.setSize(c.clientWidth, c.clientHeight); 
+    }
+    
+    function onPointerDown(e) { 
+        if(gizmo.dragging) return;
+        const r = renderer.domElement.getBoundingClientRect();
+        const m = new THREE.Vector2(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1);
+        const ray = new THREE.Raycaster(); ray.setFromCamera(m, camera);
+        
+        if(app.mode === 'weld') {
+            const hits = ray.intersectObjects(objects, true);
+            if(hits.length > 0) app.handleWeld(hits[0]);
+            return;
+        }
+
+        if(app.mode === 'measure') {
+            const hits = ray.intersectObjects([...objects, gridHelper], true); // Allow measuring on grid? better on objects
+            // Si no da a objeto, usamos plano matematico
+            let pt;
+            if(hits.length > 0) pt = hits[0].point;
+            else { const p = new THREE.Plane(new THREE.Vector3(0,1,0), 0); const t = new THREE.Vector3(); ray.ray.intersectPlane(p, t); pt = t; }
+            
+            if(pt) app.handleMeasure(null, pt);
+            return;
+        }
+
+        const hits = ray.intersectObjects(objects, true);
+        if(hits.length > 0) { let t = hits[0].object; while(t.parent && t.parent.type!=='Scene') t = t.parent; app.select(t); } 
+        else { app.select(null); } 
+    }
+
+    function onPointerMove(e) {
+        if(app.mode === 'measure' && app.measureState.step === 1) {
+            // Update temp line logic if wanted visual feedback before click
+        }
+    }
+
+    function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); ui.updateLabels(); ui.updateMeasureLabels(); }
+
+    window.app = app; window.ui = ui; window.onload = init;
