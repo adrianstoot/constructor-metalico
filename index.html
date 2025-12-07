@@ -425,11 +425,20 @@
 
         // --- CORE ---
         startNewProject: () => {
-            currentProjectName = "Nuevo Proyecto " + new Date().toLocaleDateString();
-            document.getElementById('project-name-display').innerText = currentProjectName;
-            app.resetScene();
+            // UI First: Garantizar respuesta visual
             document.getElementById('home-screen').classList.add('hidden-screen');
             document.getElementById('app').classList.add('visible');
+
+            // Logic: Verificar si init ya ocurrió
+            if (typeof scene === 'undefined' || !scene) {
+                console.warn("Inicializando escena bajo demanda...");
+                init();
+            }
+
+            currentProjectName = "Nuevo Proyecto " + new Date().toLocaleDateString();
+            document.getElementById('project-name-display').innerText = currentProjectName;
+            
+            app.resetScene();
             app.updateGridConfig();
         },
         goHome: () => {
@@ -467,6 +476,9 @@
             const p = JSON.parse(localStorage.getItem(key));
             currentProjectName = p.name;
             document.getElementById('project-name-display').innerText = currentProjectName;
+            
+            if (typeof scene === 'undefined' || !scene) init();
+            
             app.resetScene();
             p.data.forEach(d => {
                 let obj;
@@ -489,6 +501,9 @@
 
         // --- GRID LOGIC ---
         updateGridConfig: () => {
+            // Guard clause: si scene no existe, no hacer nada
+            if (typeof scene === 'undefined' || !scene) return;
+
             const val = document.getElementById('grid-selector').value;
             let size = 16, divs = 16;
             if(val === '2_2') { size=2; divs=2; }
@@ -682,6 +697,9 @@
         rotateSelection: (axis) => { if(selectedObj) { selectedObj.rotation[axis] += Math.PI/2; ui.updateCoords(); } },
         deleteSelected: () => { if(selectedObj) { gizmo.detach(); scene.remove(selectedObj); objects.splice(objects.indexOf(selectedObj), 1); app.select(null); ui.removeLabel(); } },
         resetScene: () => { 
+            // Guard clause: si scene no existe, no hacer nada
+            if (typeof scene === 'undefined' || !scene) return;
+
             objects.forEach(o => scene.remove(o)); objects.length=0; 
             measures.forEach(m => scene.remove(m)); measures.length=0;
             document.querySelectorAll('.measure-label').forEach(e => e.remove());
@@ -784,6 +802,8 @@
     };
 
     function init() {
+        if (scene) return; // Evitar doble inicialización
+
         // Home Animation
         const c = document.getElementById('bg-canvas'); const ctx = c.getContext('2d');
         let w, h; const nodes = [];
@@ -868,3 +888,6 @@
     function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); ui.updateLabels(); ui.updateMeasureLabels(); }
 
     window.app = app; window.ui = ui; window.onload = init;
+</script>
+</body>
+</html>
