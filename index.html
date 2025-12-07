@@ -603,7 +603,7 @@
             if(t==='BOLT'){ o=new THREE.Group(); const sh=new THREE.Mesh(new THREE.CylinderGeometry(d/2,d/2,l/1000,12), matSteel.clone()); sh.position.y=-(l/1000)/2; const hd=new THREE.Mesh(new THREE.CylinderGeometry(d*0.9,d*0.9,d*0.7,6), matSteel.clone()); o.add(sh); o.add(hd); }
             else if(t==='NUT'){ o=new THREE.Mesh(new THREE.CylinderGeometry(d*1.5,d*1.5,d*0.6,6), matSteel.clone()); o.rotation.x=Math.PI/2; }
             else { const sh=new THREE.Shape(); sh.absarc(0,0,d*1.1,0,Math.PI*2); const hl=new THREE.Path(); hl.absarc(0,0,d*0.55,0,Math.PI*2,true); sh.holes.push(hl); o=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:d*0.15,bevelEnabled:false}), matSteel.clone()); o.rotation.x=Math.PI/2; }
-            o.userData={type:t, fSize:s, fLen:l, name:`ISO ${s}`}; o.traverse(c=>{c.castShadow=true;c.receiveShadow=true});
+            o.userData={type:t, fSize:s, fLen:l, name:`ISO ${s}`, steelType: 'S275', originalMat: matSteel.clone()}; o.traverse(c=>{c.castShadow=true;c.receiveShadow=true});
             if(add) app.addToScene(o); return o;
         },
 
@@ -719,7 +719,7 @@
             document.getElementById('editor-fastener').style.display = (['BOLT','NUT','WASHER'].includes(t)) ? 'block' : 'none';
             
             // Panel de Material (Perfiles y Componentes excepto Pernos)
-            const showMaterial = (t==='PROFILE' || (document.getElementById('editor-component').style.display==='block' && t!=='ANCHOR'));
+            const showMaterial = (t==='PROFILE' || ['BOLT','NUT','WASHER'].includes(t) || (document.getElementById('editor-component').style.display==='block' && t!=='ANCHOR'));
             document.getElementById('editor-material-props').style.display = showMaterial ? 'block' : 'none';
             if(showMaterial) {
                 document.getElementById('steel-type').value = o.userData.steelType || 'S275';
@@ -841,4 +841,5 @@
 </script>
 </body>
 </html>
+
 
