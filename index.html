@@ -91,8 +91,6 @@
         .toast { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 4px; font-size: 13px; font-weight: 500; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 30; border: 1px solid var(--accent); display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
         .toast.visible { opacity: 1; }
         
-        .measure-label { position: absolute; background: var(--accent); color: white; padding: 2px 6px; font-size: 11px; font-weight: bold; border-radius: 4px; pointer-events: none; transform: translate(-50%, -50%); z-index: 5; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
-
         .hidden { display: none !important; }
     </style>
     <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
@@ -237,7 +235,7 @@
             <div class="separator"></div>
             
             <button id="tool-weld" class="tool-icon" onclick="app.setTool('weld')" title="Soldadura (Click en superficie)"><i class="fas fa-burn text-orange-400"></i></button>
-            <button id="tool-measure" class="tool-icon" onclick="app.setTool('measure')" title="Medir (Click A -> Click B)"><i class="fas fa-ruler-horizontal text-yellow-400"></i></button>
+            <!-- HERRAMIENTA DE MEDIR ELIMINADA AQUI -->
             
             <div class="separator"></div>
             
@@ -284,9 +282,20 @@
                 <input type="number" id="comp-t" step="0.001" onchange="app.updateComponent()">
             </div>
 
+            <!-- NUEVO BLOQUE DE PROPIEDADES DE MATERIAL -->
+            <div id="editor-material-props" style="display:none;" class="control-group">
+                <label class="label text-blue-400"><i class="fas fa-cubes"></i> Material</label>
+                <label class="label mt-2">Tipo de Acero</label>
+                <select id="steel-type" onchange="app.updateSteelType()">
+                    <option value="S235">S235</option>
+                    <option value="S275" selected>S275</option>
+                    <option value="S355">S355</option>
+                </select>
+            </div>
+
             <div id="editor-fastener" style="display:none;" class="control-group">
                 <label class="label text-blue-400"><i class="fas fa-bolt"></i> Especificación</label>
-                <label class="label mt-2">Métrica (M)</label>
+                <label class="label mt-2">Métrica (M) - UNE-EN 14399</label>
                 <select id="fast-size" onchange="app.updateFastener()">
                     <option value="12">M12</option>
                     <option value="16">M16</option>
@@ -356,7 +365,7 @@
 
     let scene, mainCamera, renderer, controls, gizmo, camera, dirLight, ambLight, gridHelper, subGridHelper; 
     const objects = [];
-    const measures = [];
+    // ELIMINADO: const measures = [];
     let selectedObj = null;
     let currentProjectName = "Sin Título";
 
@@ -365,7 +374,7 @@
     const matDark = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.7, metalness: 0.3 });
     const matGalv = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.3, metalness: 0.3 });
     const matWeld = new THREE.MeshStandardMaterial({ color: 0xff4500, roughness: 0.8, emissive: 0x220000 }); // Soldadura
-    const matMeasure = new THREE.LineBasicMaterial({ color: 0xffd700, depthTest: false, depthWrite: false }); // Medición
+    // ELIMINADO: const matMeasure
 
     // --- FÁBRICA DE GEOMETRÍA ---
     const GeometryFactory = {
@@ -421,7 +430,7 @@
 
     const app = {
         mode: 'select',
-        measureState: { step: 0, p1: null, tempObj: null },
+        // ELIMINADO: measureState
 
         // --- CORE ---
         startNewProject: () => {
@@ -541,14 +550,8 @@
             const btn = document.getElementById('tool-'+mode); if(btn) btn.classList.add('active');
             
             // Gizmo Logic
-            if(['select', 'weld', 'measure'].includes(mode)) { if(gizmo) gizmo.detach(); }
+            if(['select', 'weld'].includes(mode)) { if(gizmo) gizmo.detach(); }
             else { if(gizmo) { gizmo.setMode(mode); if(selectedObj && selectedObj.userData.type !== 'WELD') gizmo.attach(selectedObj); } }
-            
-            // Reset Measure State
-            if(mode !== 'measure') {
-                if(app.measureState.tempObj) { scene.remove(app.measureState.tempObj); app.measureState.tempObj = null; }
-                app.measureState.step = 0;
-            }
             
             ui.toast(`Herramienta: ${mode.toUpperCase()}`);
         },
@@ -565,47 +568,14 @@
             ui.toast("Soldadura aplicada");
         },
 
-        handleMeasure: (intersect, point) => {
-            const state = app.measureState;
-            if(state.step === 0) {
-                // Click 1
-                state.p1 = point.clone();
-                state.step = 1;
-                // Visual marker start
-                const g = new THREE.SphereGeometry(0.02);
-                const m = new THREE.MeshBasicMaterial({color:0xffd700});
-                state.tempObj = new THREE.Mesh(g,m);
-                state.tempObj.position.copy(point);
-                scene.add(state.tempObj);
-            } else {
-                // Click 2
-                const p2 = point.clone();
-                const dist = state.p1.distanceTo(p2);
-                
-                // Draw Final Line
-                const pts = [state.p1, p2];
-                const geo = new THREE.BufferGeometry().setFromPoints(pts);
-                const line = new THREE.Line(geo, matMeasure);
-                scene.add(line);
-                measures.push(line);
-                
-                // Add Label
-                ui.createMeasureLabel(state.p1, p2, dist);
-                
-                // Reset
-                scene.remove(state.tempObj);
-                state.tempObj = null;
-                state.step = 0;
-                ui.toast(`Distancia: ${dist.toFixed(3)} m`);
-            }
-        },
+        // ELIMINADO: handleMeasure
 
         // --- OBJECT CREATION WRAPPERS ---
         createProfileDefault: () => {
             const type = document.getElementById('create-type').value;
             const size = DB[type][1] || 100;
             const m = GeometryFactory.generateProfile(type, size, 3.0);
-            m.userData = { type: 'PROFILE', pType: type, pSize: size, pLen: 3.0, originalMat: matSteel.clone() };
+            m.userData = { type: 'PROFILE', pType: type, pSize: size, pLen: 3.0, steelType: 'S275', originalMat: matSteel.clone() };
             m.material = m.userData.originalMat; m.rotation.x = Math.PI/2; m.castShadow = true; m.receiveShadow = true;
             app.addToScene(m);
         },
@@ -621,7 +591,7 @@
         },
         spawnComponent: (t, w, h, th, n) => {
             const m = GeometryFactory.generateComponent(t, w, h, th);
-            m.userData = { type: t, cW: w, cH: h, cT: th, name: n, originalMat: matSteel.clone() };
+            m.userData = { type: t, cW: w, cH: h, cT: th, name: n, steelType: 'S275', originalMat: matSteel.clone() };
             m.material = m.userData.originalMat; m.castShadow = true; m.receiveShadow = true;
             app.addToScene(m);
         },
@@ -641,7 +611,7 @@
         addToScene: (o) => { if(gizmo) gizmo.detach(); scene.add(o); objects.push(o); app.select(o); },
         select: (o) => {
             selectedObj = o; ui.updateLabels();
-            if(o) { if(gizmo && app.mode !== 'weld' && app.mode !== 'measure') gizmo.attach(o); ui.showInspector(true); ui.populateInspector(o); }
+            if(o) { if(gizmo && app.mode !== 'weld') gizmo.attach(o); ui.showInspector(true); ui.populateInspector(o); }
             else { if(gizmo) gizmo.detach(); ui.showInspector(false); }
         },
         updateSelectedGeometry: () => {
@@ -672,6 +642,11 @@
             selectedObj.userData.cW = w; selectedObj.userData.cH = h; selectedObj.userData.cT = th;
             ui.updateLabels();
         },
+        updateSteelType: () => {
+            if(!selectedObj) return;
+            selectedObj.userData.steelType = document.getElementById('steel-type').value;
+            ui.toast(`Material: ${selectedObj.userData.steelType}`);
+        },
         updateFastener: () => {
             if(!selectedObj || !['BOLT','NUT','WASHER'].includes(selectedObj.userData.type)) return;
             const ns = parseInt(document.getElementById('fast-size').value); const nl = parseFloat(document.getElementById('fast-len').value);
@@ -701,8 +676,8 @@
             if (typeof scene === 'undefined' || !scene) return;
 
             objects.forEach(o => scene.remove(o)); objects.length=0; 
-            measures.forEach(m => scene.remove(m)); measures.length=0;
-            document.querySelectorAll('.measure-label').forEach(e => e.remove());
+            // ELIMINADO: cleanup de measures
+            // document.querySelectorAll('.measure-label').forEach(e => e.remove());
             app.select(null); 
         },
 
@@ -737,10 +712,19 @@
         populateInspector: (o) => {
             document.getElementById('obj-id').innerText = '#' + o.id;
             const t = o.userData.type;
+            
+            // Paneles específicos
             document.getElementById('editor-profile').style.display = (t==='PROFILE') ? 'block' : 'none';
             document.getElementById('editor-component').style.display = (['PLATE','BASE_PLATE','GUSSET_SQR','GUSSET_TRI','SUPPORT_ANGLE','ANCHOR'].includes(t)) ? 'block' : 'none';
             document.getElementById('editor-fastener').style.display = (['BOLT','NUT','WASHER'].includes(t)) ? 'block' : 'none';
             
+            // Panel de Material (Perfiles y Componentes excepto Pernos)
+            const showMaterial = (t==='PROFILE' || (document.getElementById('editor-component').style.display==='block' && t!=='ANCHOR'));
+            document.getElementById('editor-material-props').style.display = showMaterial ? 'block' : 'none';
+            if(showMaterial) {
+                document.getElementById('steel-type').value = o.userData.steelType || 'S275';
+            }
+
             if(t==='PROFILE') { document.getElementById('edit-type').value=o.userData.pType; ui.fillSizes('edit', o.userData.pType); document.getElementById('edit-size').value=o.userData.pSize; document.getElementById('edit-len').value=o.userData.pLen; }
             else if(t==='ANCHOR') { document.getElementById('comp-w').value=o.userData.cDiam/1000; document.getElementById('comp-h').value=o.userData.cLen/1000; }
             else if(document.getElementById('editor-component').style.display==='block') { document.getElementById('comp-w').value=o.userData.cW; document.getElementById('comp-h').value=o.userData.cH; document.getElementById('comp-t').value=o.userData.cT; }
@@ -776,27 +760,8 @@
             div.style.left = ((pos.x*.5+.5)*cont.clientWidth)+'px'; div.style.top = ((pos.y*-.5+.5)*cont.clientHeight)+'px';
             cont.appendChild(div);
         },
-        createMeasureLabel: (p1, p2, dist) => {
-            const mid = p1.clone().add(p2).multiplyScalar(0.5);
-            const div = document.createElement('div');
-            div.className = 'measure-label';
-            div.innerText = dist.toFixed(3) + ' m';
-            div.dataset.x = mid.x; div.dataset.y = mid.y; div.dataset.z = mid.z;
-            document.getElementById('labels-container').appendChild(div);
-            ui.updateMeasureLabels();
-        },
-        updateMeasureLabels: () => {
-            document.querySelectorAll('.measure-label').forEach(el => {
-                const pos = new THREE.Vector3(parseFloat(el.dataset.x), parseFloat(el.dataset.y), parseFloat(el.dataset.z));
-                pos.project(camera);
-                if(Math.abs(pos.z)>1) el.style.display='none';
-                else {
-                    el.style.display='block';
-                    el.style.left = ((pos.x*.5+.5)*document.getElementById('canvas-container').clientWidth)+'px';
-                    el.style.top = ((pos.y*-.5+.5)*document.getElementById('canvas-container').clientHeight)+'px';
-                }
-            });
-        },
+        // ELIMINADO: createMeasureLabel
+        // ELIMINADO: updateMeasureLabels
         removeLabel: () => { const cont = document.getElementById('labels-container'); Array.from(cont.children).forEach(c => { if(c.classList.contains('static-label')) c.remove(); }); },
         toast: (msg) => { const t = document.getElementById('toast'); t.innerHTML = msg; t.classList.add('visible'); setTimeout(() => t.classList.remove('visible'), 2000); }
     };
@@ -837,8 +802,8 @@
 
         window.addEventListener('resize', onResize);
         renderer.domElement.addEventListener('pointerdown', onPointerDown);
-        renderer.domElement.addEventListener('pointermove', onPointerMove);
-        controls.addEventListener('change', () => { ui.updateLabels(); ui.updateMeasureLabels(); });
+        renderer.domElement.addEventListener('pointermove', (e) => {}); // Limpiado pointer move de medida
+        controls.addEventListener('change', () => { ui.updateLabels(); });
 
         ui.populateSizesDropdown();
         animate();
@@ -863,29 +828,14 @@
             return;
         }
 
-        if(app.mode === 'measure') {
-            const hits = ray.intersectObjects([...objects, gridHelper], true); // Allow measuring on grid? better on objects
-            // Si no da a objeto, usamos plano matematico
-            let pt;
-            if(hits.length > 0) pt = hits[0].point;
-            else { const p = new THREE.Plane(new THREE.Vector3(0,1,0), 0); const t = new THREE.Vector3(); ray.ray.intersectPlane(p, t); pt = t; }
-            
-            if(pt) app.handleMeasure(null, pt);
-            return;
-        }
+        // ELIMINADO: Bloque de medida
 
         const hits = ray.intersectObjects(objects, true);
         if(hits.length > 0) { let t = hits[0].object; while(t.parent && t.parent.type!=='Scene') t = t.parent; app.select(t); } 
         else { app.select(null); } 
     }
 
-    function onPointerMove(e) {
-        if(app.mode === 'measure' && app.measureState.step === 1) {
-            // Update temp line logic if wanted visual feedback before click
-        }
-    }
-
-    function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); ui.updateLabels(); ui.updateMeasureLabels(); }
+    function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); ui.updateLabels(); }
 
     window.app = app; window.ui = ui; window.onload = init;
 </script>
